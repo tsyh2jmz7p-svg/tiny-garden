@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#eaf7ee">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ちいさな植物園">
+<link rel="manifest" href="manifest.json">
+<title>ちいさな植物園</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif;
+    background: linear-gradient(#eaf7ee, #fdf8e9); color: #425247;
+    display:flex; justify-content:center; align-items:center;
+  }
+  .game { width:min(430px,100%); min-height:100vh; padding:24px 18px; display:flex; flex-direction:column; }
+  h1 { text-align:center; margin:8px 0 4px; font-size:25px; }
+  .sub { text-align:center; color:#7b8b80; font-size:13px; margin-bottom:20px; }
+  .card {
+    background:rgba(255,255,255,.82); border-radius:24px; padding:20px;
+    box-shadow:0 8px 25px rgba(70,90,75,.10);
+  }
+  .sky { height:220px; border-radius:20px; background:linear-gradient(#dff4ff,#f8f1d9); position:relative; overflow:hidden; }
+  .sun { position:absolute; right:24px; top:20px; font-size:38px; }
+  .cloud { position:absolute; left:20px; top:35px; font-size:28px; opacity:.75; }
+  .pot { position:absolute; bottom:17px; left:50%; transform:translateX(-50%); font-size:70px; }
+  .plant { position:absolute; bottom:73px; left:50%; transform:translateX(-50%); font-size:72px; transition:.3s; }
+  .status { text-align:center; margin:14px 0 4px; font-weight:bold; }
+  .bar { height:12px; background:#e5ece7; border-radius:99px; overflow:hidden; }
+  .fill { height:100%; width:0%; background:#79b889; border-radius:99px; transition:.4s; }
+  .buttons { display:flex; gap:10px; margin-top:16px; }
+  button {
+    flex:1; border:0; border-radius:15px; padding:14px 8px; font-size:15px; font-weight:bold;
+    background:#e4f1e6; color:#3e6849; cursor:pointer;
+  }
+  button.primary { background:#76b686; color:white; }
+  button:disabled { opacity:.45; }
+  .info { margin-top:14px; text-align:center; font-size:13px; color:#7a867d; min-height:20px; }
+  .reset { margin-top:12px; background:transparent; color:#9a9f9b; font-size:12px; padding:8px; }
+</style>
+</head>
+<body>
+<div class="game">
+  <h1>🌱 ちいさな植物園</h1>
+  <div class="sub">ゆっくり育てる、ちいさな植物</div>
+
+  <div class="card">
+    <div class="sky">
+      <div class="sun">☀️</div>
+      <div class="cloud">☁️</div>
+      <div class="plant" id="plant">🌱</div>
+      <div class="pot">🪴</div>
+    </div>
+
+    <div class="status" id="status">種を植えよう</div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+
+    <div class="buttons">
+      <button class="primary" id="plantBtn">🌰 種を植える</button>
+      <button id="waterBtn" disabled>💧 水をあげる</button>
+    </div>
+    <div class="info" id="info"></div>
+    <button class="reset" id="resetBtn">最初からやり直す</button>
+  </div>
+</div>
+
+<script>
+const saved = JSON.parse(localStorage.getItem("tinyGarden") || "null");
+let game = saved || { planted:false, growth:0, lastWater:0 };
+
+const stages = [
+  ["🌰","種を植えたよ"],
+  ["🌱","芽が出てきた！"],
+  ["🌿","すくすく成長中"],
+  ["🌳","もうすぐ立派な植物"],
+  ["🌸","花が咲いた！"]
+];
+
+function save(){ localStorage.setItem("tinyGarden", JSON.stringify(game)); }
+
+function render(){
+  const plant=document.getElementById("plant");
+  const status=document.getElementById("status");
+  const fill=document.getElementById("fill");
+  const plantBtn=document.getElementById("plantBtn");
+  const waterBtn=document.getElementById("waterBtn");
+  const info=document.getElementById("info");
+
+  if(!game.planted){
+    plant.textContent="🌱"; status.textContent="種を植えよう"; fill.style.width="0%";
+    plantBtn.disabled=false; waterBtn.disabled=true; info.textContent="まずは種を植えてみよう。";
+    return;
+  }
+
+  const stage=Math.min(4, Math.floor(game.growth/25));
+  plant.textContent=stages[stage][0];
+  status.textContent=stages[stage][1];
+  fill.style.width=game.growth+"%";
+  plantBtn.disabled=true;
+
+  const now=Date.now();
+  const canWater = now-game.lastWater >= 10000 && game.growth < 100;
+  waterBtn.disabled=!canWater;
+
+  if(game.growth>=100){
+    info.textContent="🌸 おめでとう！植物が咲いたよ。";
+  } else if(!canWater){
+    const sec=Math.ceil((10000-(now-game.lastWater))/1000);
+    info.textContent=`次の水やりまで ${sec} 秒くらい`;
+  } else {
+    info.textContent="土が乾いてるみたい。水をあげよう💧";
+  }
+}
+
+document.getElementById("plantBtn").onclick=()=>{
+  game={planted:true,growth:5,lastWater:0}; save(); render();
+};
+document.getElementById("waterBtn").onclick=()=>{
+  if(Date.now()-game.lastWater<10000 || game.growth>=100) return;
+  game.growth=Math.min(100,game.growth+20);
+  game.lastWater=Date.now(); save(); render();
+};
+document.getElementById("resetBtn").onclick=()=>{
+  if(confirm("最初から育て直す？")){ localStorage.removeItem("tinyGarden"); game={planted:false,growth:0,lastWater:0}; render(); }
+};
+
+render();
+setInterval(render,1000);
+</script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+</body>
+</html>

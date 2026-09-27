@@ -1,0 +1,10 @@
+{
+  "name": "ちいさな植物園",
+  "short_name": "植物園",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#eaf7ee",
+  "theme_color": "#eaf7ee",
+  "lang": "ja",
+  "icons": []
+}
